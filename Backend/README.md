@@ -52,3 +52,53 @@ Send a JSON object with the following structure:
 - The `firstname`, `email`, and `password` fields are required.
 - The `lastname` field is optional but must be at least 3 characters if provided.
 - The password is securely hashed before storage.
+
+---
+
+## POST `/users/login`
+
+### Description
+
+Authenticates a user with email and password. Returns a JWT authentication token and the user object on successful login.
+
+### Request Body
+
+Send a JSON object with the following structure:
+
+```json
+{
+  "email": "string (valid email, required)",
+  "password": "string (min 6 chars, required)"
+}
+```
+
+#### Example
+
+```json
+{
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
+}
+```
+
+### Responses
+
+- **200 OK**
+  - Login successful.
+  - Returns: `{ "token": "<jwt_token>", "user": { ...userData } }`
+
+- **400 Bad Request**
+  - Validation failed (e.g., missing fields, invalid email, short password).
+  - Returns: `{ "errors": [ ... ] }`
+
+- **401 Unauthorized**
+  - Invalid email or password.
+  - Returns: `{ "message": "Invalid email or password" }`
+
+- **500 Internal Server Error**
+  - Unexpected server error.
+
+### Notes
+
+- Both `email` and `password` are required.
+- The password is compared securely using hashing.
