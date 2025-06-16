@@ -102,3 +102,61 @@ Send a JSON object with the following structure:
 
 - Both `email` and `password` are required.
 - The password is compared securely using hashing.
+
+---
+
+## GET `/users/profile`
+
+### Description
+
+Returns the authenticated user's profile information. Requires a valid JWT token in the `Authorization` header or as a cookie.
+
+### Authentication
+
+- **Required**: Yes (JWT token)
+
+### Request
+
+- No request body required.
+- Send the JWT token as a Bearer token in the `Authorization` header or as a `token` cookie.
+
+#### Example Header
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+### Responses
+
+- **200 OK**
+  - Returns the user profile object.
+
+- **401 Unauthorized**
+  - Missing or invalid token.
+
+---
+
+## GET `/users/logout`
+
+### Description
+
+Logs out the authenticated user by blacklisting the current JWT token and clearing the authentication cookie.
+
+### Authentication
+
+- **Required**: Yes (JWT token)
+
+### Request
+
+- No request body required.
+- Send the JWT token as a Bearer token in the `Authorization` header or as a `token` cookie.
+
+### Responses
+
+- **200 OK**
+  - Returns: `{ "message": "Logged out successfully" }`
+
+- **401 Unauthorized**
+  - Missing or invalid token.
+
+---
