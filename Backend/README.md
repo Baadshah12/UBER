@@ -161,69 +161,198 @@ Logs out the authenticated user by blacklisting the current JWT token and cleari
 
 ---
 
-## POST `/captains/register`
+## Captain Endpoints
 
-### Description
+### POST `/captains/register`
 
-Registers a new captain in the system. On successful registration, returns the created captain object.
+Registers a new captain in the system.
 
-### Request Body
-
-Send a JSON object with the following structure:
+#### Request Body
 
 ```json
 {
   "fullname": {
-    "firstname": "string (min 3 chars, required)",
-    "lastname": "string (optional)"
+    "firstname": "string", // required, min 3 chars
+    "lastname": "string"   // optional
   },
-  "email": "string (valid email, required)",
-  "password": "string (min 6 chars, required)",
+  "email": "string",        // required, valid email
+  "password": "string",     // required, min 6 chars
   "vehicle": {
-    "color": "string (min 3 chars, required)",
-    "plate": "string (min 3 chars, required)",
-    "capacity": "number (required)",
-    "vehicleType": "string (one of: car, motorcycle, auto, required)"
+    "color": "string",      // required, min 3 chars
+    "plate": "string",      // required, min 3 chars
+    "capacity": 4,          // required, number
+    "vehicleType": "car"    // required, one of: "car", "motorcycle", "auto"
   }
 }
 ```
 
-#### Example
+#### Successful Response (`201 Created`)
 
 ```json
 {
-  "fullname": {
-    "firstname": "Alice",
-    "lastname": "Smith"
-  },
-  "email": "alice.smith@example.com",
-  "password": "captainPass123",
-  "vehicle": {
-    "color": "Red",
-    "plate": "XYZ1234",
-    "capacity": 4,
-    "vehicleType": "car"
+  "token": "<jwt_token>", // JWT authentication token
+  "captain": {
+    "_id": "string",
+    "fullname": {
+      "firstname": "string",
+      "lastname": "string"
+    },
+    "email": "string",
+    "vehicle": {
+      "color": "string",
+      "plate": "string",
+      "capacity": 4,
+      "vehicleType": "car"
+    }
+    // ...other captain fields
   }
 }
 ```
 
-### Responses
+#### Error Response (`400 Bad Request`)
 
-- **201 Created**
-  - Registration successful.
-  - Returns: `{ "captain": { ...captainData } }`
+```json
+{
+  "errors": [
+    {
+      "msg": "First name must be at least 3 characters long", // example error message
+      "param": "fullname.firstname",
+      "location": "body"
+    }
+    // ...other validation errors
+  ]
+}
+```
 
-- **400 Bad Request**
-  - Validation failed (e.g., missing fields, invalid email, short password, invalid vehicle data).
-  - Returns: `{ "errors": [ ... ] }`
+#### Error Response (`500 Internal Server Error`)
 
-- **500 Internal Server Error**
-  - Unexpected server error.
+```json
+{
+  "error": "Internal server error"
+}
+```
 
-### Notes
+---
 
-- The `fullname.firstname`, `email`, `password`, and all `vehicle` fields are required.
-- The `vehicleType` must be one of: `car`, `motorcycle`, or `auto`.
-- The password is securely hashed before storage.
+### POST `/captains/login`
+
+Authenticates a captain with email and password.
+
+#### Request Body
+
+```json
+{
+  "email": "string",    // required, valid email
+  "password": "string"  // required, min 6 chars
+}
+```
+
+#### Successful Response (`200 OK`)
+
+```json
+{
+  "token": "<jwt_token>", // JWT authentication token
+  "captain": {
+    "_id": "string",
+    "fullname": {
+      "firstname": "string",
+      "lastname": "string"
+    },
+    "email": "string",
+    "vehicle": {
+      "color": "string",
+      "plate": "string",
+      "capacity": 4,
+      "vehicleType": "car"
+    }
+    // ...other captain fields
+  }
+}
+```
+
+#### Error Response (`400 Bad Request`)
+
+```json
+{
+  "errors": [
+    {
+      "msg": "Invalid email address", // example error message
+      "param": "email",
+      "location": "body"
+    }
+    // ...other validation errors
+  ]
+}
+```
+
+#### Error Response (`401 Unauthorized`)
+
+```json
+{
+  "message": "Invalid email or password"
+}
+```
+
+---
+
+### GET `/captains/profile`
+
+Returns the authenticated captain's profile.
+
+- **Authentication:** Required (JWT token in `Authorization` header or `token` cookie)
+
+#### Successful Response (`200 OK`)
+
+```json
+{
+  "captain": {
+    "_id": "string",
+    "fullname": {
+      "firstname": "string",
+      "lastname": "string"
+    },
+    "email": "string",
+    "vehicle": {
+      "color": "string",
+      "plate": "string",
+      "capacity": 4,
+      "vehicleType": "car"
+    }
+    // ...other captain fields
+  }
+}
+```
+
+#### Error Response (`401 Unauthorized`)
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+---
+
+### GET `/captains/logout`
+
+Logs out the authenticated captain by blacklisting the current JWT token and clearing the authentication cookie.
+
+- **Authentication:** Required (JWT token in `Authorization` header or `token` cookie)
+
+#### Successful Response (`200 OK`)
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+#### Error Response (`401 Unauthorized`)
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
 
 ---
