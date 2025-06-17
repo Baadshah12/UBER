@@ -160,3 +160,70 @@ Logs out the authenticated user by blacklisting the current JWT token and cleari
   - Missing or invalid token.
 
 ---
+
+## POST `/captains/register`
+
+### Description
+
+Registers a new captain in the system. On successful registration, returns the created captain object.
+
+### Request Body
+
+Send a JSON object with the following structure:
+
+```json
+{
+  "fullname": {
+    "firstname": "string (min 3 chars, required)",
+    "lastname": "string (optional)"
+  },
+  "email": "string (valid email, required)",
+  "password": "string (min 6 chars, required)",
+  "vehicle": {
+    "color": "string (min 3 chars, required)",
+    "plate": "string (min 3 chars, required)",
+    "capacity": "number (required)",
+    "vehicleType": "string (one of: car, motorcycle, auto, required)"
+  }
+}
+```
+
+#### Example
+
+```json
+{
+  "fullname": {
+    "firstname": "Alice",
+    "lastname": "Smith"
+  },
+  "email": "alice.smith@example.com",
+  "password": "captainPass123",
+  "vehicle": {
+    "color": "Red",
+    "plate": "XYZ1234",
+    "capacity": 4,
+    "vehicleType": "car"
+  }
+}
+```
+
+### Responses
+
+- **201 Created**
+  - Registration successful.
+  - Returns: `{ "captain": { ...captainData } }`
+
+- **400 Bad Request**
+  - Validation failed (e.g., missing fields, invalid email, short password, invalid vehicle data).
+  - Returns: `{ "errors": [ ... ] }`
+
+- **500 Internal Server Error**
+  - Unexpected server error.
+
+### Notes
+
+- The `fullname.firstname`, `email`, `password`, and all `vehicle` fields are required.
+- The `vehicleType` must be one of: `car`, `motorcycle`, or `auto`.
+- The password is securely hashed before storage.
+
+---
