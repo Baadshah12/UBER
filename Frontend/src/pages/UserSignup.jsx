@@ -1,5 +1,7 @@
-import React,{useState} from 'react'
-import { Link } from 'react-router-dom'
+import React,{useState,useContext} from 'react'
+import { Link,useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import {UserContextData} from '../context/userContext';
 
 const UserSignup = () => {
     const [email, setEmail] = useState('');
@@ -7,18 +9,31 @@ const UserSignup = () => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [userData, setUserData] = useState({});
+    const navigate = useNavigate();
+    const { user,setUser } = useContext(UserContextData);
 
-    const submitHandler = (e) => {
+    const submitHandler = async(e) => {
         e.preventDefault();
-        setUserData({
-            fullName:
-            {
-               firstName:firstName,
-               lastName:lastName
+        const newUser = {
+            fullname:{
+                firstname: firstName,
+                lastname: lastName
             },
-            email:email,
-            password:password
-        });
+            email: email,
+            password: password
+        }
+
+        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/register`, newUser);
+
+        if (response.status === 201) {
+            const data = response.data;
+            setUser(data.user);
+            localStorage.setItem('token', data.token); // Store user data in localStorage
+            navigate('/home');
+        } else {
+            console.error('Registration failed');
+        }
+
         setFirstName('');
         setLastName('');
         setEmail('');
@@ -38,7 +53,7 @@ const UserSignup = () => {
                 <input type="email" placeholder="Enter your email" required value={email} onChange={(e) => setEmail(e.target.value)} className='bg-[#eeeeee] mb-6 rounded px-4 py-2 border w-full text-lg placeholder:text-base' />
                 <h3 className='text-lg font-medium  mb-2'>Enter Password</h3>
                 <input type="password" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)} className='bg-[#eeeeee] mb-6 rounded px-4 py-2 border w-full text-lg placeholder:text-base' />
-                <button className='bg-[#111] text-white font-semibold mb-3 rounded px-4 py-2 w-full text-lg placeholder:text-base'>Login</button>
+                <button className='bg-[#111] text-white font-semibold mb-3 rounded px-4 py-2 w-full text-lg placeholder:text-base'>Create Account</button>
             </form>
             <p className='text-center font-semibold'>Already have an account? <Link to='/login' className='text-blue-600 px-1 underline'>Login Here</Link></p>
         </div>
