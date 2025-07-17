@@ -356,3 +356,78 @@ Logs out the authenticated captain by blacklisting the current JWT token and cle
 ```
 
 ---
+
+## GET `/get-fare`
+
+### Description
+
+Calculates and returns the estimated fare for a ride based on the provided origin, destination, and vehicle type.
+
+### Request Query Parameters
+
+- `origin`: string (required) — The starting location (address or coordinates).
+- `destination`: string (required) — The ending location (address or coordinates).
+- `vehicleType`: string (required) — One of: `"car"`, `"motorcycle"`, `"auto"`.
+
+#### Example
+
+```
+GET /get-fare?origin=Downtown&destination=Airport&vehicleType=car
+```
+
+### Responses
+
+- **200 OK**
+  - Returns: `{ "fare": 250.0, "distance": 12.5, "duration": 25 }`
+    - `fare`: number — Estimated fare amount.
+    - `distance`: number — Distance in kilometers.
+    - `duration`: number — Estimated duration in minutes.
+
+- **400 Bad Request**
+  - Missing or invalid parameters.
+  - Returns: `{ "errors": [ ... ] }`
+
+- **500 Internal Server Error**
+  - Unexpected server error.
+
+### Notes
+
+- All parameters are required.
+- Fare calculation may depend on distance, duration, and vehicle type.
+
+---
+
+## Captain Fare Endpoint
+
+### GET `/captains/get-fare`
+
+Calculates and returns the estimated fare for a ride for captains, based on the provided origin, destination, and vehicle type.
+
+### Request Query Parameters
+
+- `origin`: string (required)
+- `destination`: string (required)
+- `vehicleType`: string (required)
+
+#### Example
+
+```
+GET /captains/get-fare?origin=Downtown&destination=Airport&vehicleType=car
+```
+
+### Responses
+
+- **200 OK**
+  - Returns: `{ "fare": 250.0, "distance": 12.5, "duration": 25 }`
+
+- **400 Bad Request**
+  - Missing or invalid parameters.
+
+- **500 Internal Server Error**
+  - Unexpected server error.
+
+### Notes
+
+- Parameters and response structure are the same as the user `/get-fare` endpoint.
+
+---

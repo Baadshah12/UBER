@@ -1,5 +1,5 @@
 import React,{useContext,useEffect,useState} from 'react'
-import { UserContextData } from '../context/userContext';
+import { UserContextData } from '../context/UserContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,7 +20,7 @@ const UserProtectedWrapper = ({ children }) => {
       Authorization: `Bearer ${token}`
     }
   }).then((response) => {
-    setUser(response.data.user);
+    setUser(response.data);
     setIsLoading(false);
   }).catch((error) => {
     console.error('Error fetching user profile:', error);
