@@ -16,7 +16,7 @@ function initializeSocket(server) {
         console.log(`Socket connected: ${socket.id}`);
 
         socket.on('join', async (data) => {
-    console.log(`JOIN EVENT | socket.id: ${socket.id}, data:`, data);
+    
 
     const { userType, userId } = data;
 
@@ -31,7 +31,7 @@ function initializeSocket(server) {
             { socketid: socket.id },
             { new: true }
         );
-        console.log('Updated user:', updatedUser);
+        
         if (!updatedUser) {
             console.warn('No user found with ID:', userId);
         }
@@ -44,16 +44,34 @@ function initializeSocket(server) {
     }
 });
 
+        // Handle captain location updates
         socket.on('update-location-captain', async (data) => {
             const { userId, location } = data;
             if(!location || !location.lat || !location.lng) {
                 socket.emit('error', 'Invalid location data');
                 return;
             }
-            await captainModel.findByIdAndUpdate(userId, { location: {
-                lat: location.lat,
-                lng: location.lng
-            }});
+            await captainModel.findByIdAndUpdate(userId, { 
+                location: {
+                    type: 'Point',
+                    coordinates: [location.lng, location.lat] // GeoJSON format: [longitude, latitude]
+                }
+            });
+        });
+
+        // Handle user location updates
+        socket.on('update-location-user', async (data) => {
+            const { userId, location } = data;
+            if(!location || !location.lat || !location.lng) {
+                socket.emit('error', 'Invalid location data');
+                return;
+            }
+            await userModel.findByIdAndUpdate(userId, { 
+                location: {
+                    type: 'Point',
+                    coordinates: [location.lng, location.lat] // GeoJSON format: [longitude, latitude]
+                }
+            });
         });
 
         socket.on('disconnect', () => {
@@ -62,13 +80,18 @@ function initializeSocket(server) {
     });
 }
 
-function sendMessageToSocketid(socketId, message) {
-    if (io) {
-        io.to(socketId).emit('message', message);
+function sendMessageToSocketid(socketId, messageObject) {
+    console.log('Sending message to socketId:', socketId, 'Message:', messageObject);
+     if (!io) return console.error('Socket.io not initialized');
+
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket) {
+        console.warn(`No active socket found for ID: ${socketId}`);
+        return;
     }
-    else{
-        console.error('Socket.io is not initialized');
-    }
+
+    console.log('✅ Emitting to connected socketId:', socketId);
+    socket.emit(messageObject.event, messageObject.data);
 }
 
 module.exports = {

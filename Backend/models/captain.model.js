@@ -58,14 +58,14 @@ const captainSchema = new mongoose.Schema({
         }
     },
     location:{
-        lat:{
-            type: Number,
+        type: {
+            type: String,
+            enum: ['Point']
         },
-        lng:{
-            type: Number,
-        }   
-
-    }   
+        coordinates: {
+            type: [Number] // [longitude, latitude]
+        }
+    }
 })
 
 captainSchema.index({ location: "2dsphere" });

@@ -3,7 +3,6 @@ import React from 'react'
 const LocationSearchPanel = (props) => {
   const { suggestions = [], onSuggestionClick } = props
   // Debug: log suggestions received
-  console.log('LocationSearchPanel suggestions:', suggestions)
   return (
     <div>
       {

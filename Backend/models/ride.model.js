@@ -4,11 +4,11 @@ const rideSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'User'
+        ref: 'user'
     },
     captain: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Captain'
+        ref: 'captain'
     },
     pickupLocation: {
         type: String,

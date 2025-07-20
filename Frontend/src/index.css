@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile-specific styles to handle viewport and panel behavior */
+@layer utilities {
+  /* Ensure proper viewport height on mobile */
+  .h-screen {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+  
+  /* Prevent body scroll when panels are open */
+  .no-scroll {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  
+  /* Ensure panels don't exceed viewport height */
+  .panel-container {
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+}
+
+/* Custom scrollbar for panels */
+.panel-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.panel-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 2px;
+}
+
+.panel-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

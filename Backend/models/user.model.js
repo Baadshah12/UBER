@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-
 const userSchema = new mongoose.Schema({
     fullname: {
         firstname: {
@@ -29,7 +28,19 @@ const userSchema = new mongoose.Schema({
     socketid: {
         type: String,
     },
+    location: {
+        type: {
+            type: String,
+            enum: ['Point']
+        },
+        coordinates: {
+            type: [Number] // [longitude, latitude]
+        }
+    }
 })
+
+// Add geospatial index for location queries
+userSchema.index({ location: "2dsphere" });
 
 userSchema.methods.generateAuthToken = function() {
     const token = jwt.sign(

@@ -19,6 +19,24 @@ router.get('/getFare',
     rideController.getFare
 );
 
+router.post('/confirm',
+    authMiddleware.authCaptain,
+    body('rideId').isMongoId().withMessage('Invalid ride ID'),
+    rideController.confirmRide
+);
+
+router.post('/start',
+    authMiddleware.authCaptain,
+    body('rideId').isMongoId().withMessage('Invalid ride ID'),
+    body('otp').isLength({min:4}).withMessage('OTP must be 4 digits'),
+    rideController.startRide
+);
+
+router.post('/finish',
+    authMiddleware.authCaptain,
+    body('rideId').isMongoId().withMessage('Invalid ride ID'),
+    rideController.finishRide
+);
 
 
 

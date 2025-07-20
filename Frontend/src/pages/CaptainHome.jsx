@@ -8,10 +8,13 @@ import { useGSAP } from '@gsap/react'
 import { SocketContext } from '../context/SocketContext.jsx'
 import { CaptainDataContext } from '../context/CaptainContext.jsx'
 import { useContext } from 'react'
+import axios from 'axios'
+import LiveTracking from '../components/LiveTracking'
 
 const CaptainHome = () => {
 
-  const [ridePopupPanel, setridePopupPanel] = useState(true)
+  const [ridePopupPanel, setridePopupPanel] = useState(false)
+  const [ride, setride] = useState(null)
   const [confirmridePopupPanel, setconfirmridePopupPanel] = useState(false)
   const ridePopupPanelRef = useRef(null)
   const confirmridePopupPanelRef = useRef(null)
@@ -47,7 +50,31 @@ const CaptainHome = () => {
       const locationInterval = setInterval(updateLocation, 10000); // Update every 10 seconds
       updateLocation();
 
-  }, [socket, captain]);
+  }, []);
+      socket.on('new-ride', (data) => {
+        console.log('New ride request received:', data);
+        setride(data);
+        setridePopupPanel(true);
+
+      })  
+
+    async function confirmRide() {
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/rides/confirm`, {
+          rideId: ride._id
+        }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        console.log('Ride confirmed:', response.data);
+        setconfirmridePopupPanel(true)
+        setridePopupPanel(false)
+      } catch (error) {
+        console.error('Error confirming ride:', error);
+      }
+    }
 
   useGSAP(function ()  {
     if (ridePopupPanel) {
@@ -82,16 +109,22 @@ const CaptainHome = () => {
         </Link>
       </div>
         <div className='h-3/5'>
-            <img className="h-full w-full object-cover" src="https://miro.medium.com/v2/resize:fit:1400/0*gwMx05pqII5hbfmX.gif" alt="" />
+            <LiveTracking height='60vh' />
         </div>
         <div className='h-2/5 p-6 '>
           <CaptainDetails />
       </div>
       <div ref={ridePopupPanelRef} className='fixed w-full z-10 bottom-0 translate-y-full px-3 py-10 pt-12 bg-white '>
-          <RidePopUp setridePopupPanel={setridePopupPanel} setconfirmridePopupPanel={setconfirmridePopupPanel} />
+          <RidePopUp
+          ride={ride}
+          confirmRide={confirmRide}
+          setridePopupPanel={setridePopupPanel} setconfirmridePopupPanel={setconfirmridePopupPanel} />
       </div>
       <div ref={confirmridePopupPanelRef } className='fixed h-screen w-full z-10 bottom-0 translate-y-full px-3 py-10 pt-12 bg-white '>
-          <ConfirmRidePopUp setconfirmridePopupPanel={setconfirmridePopupPanel} setridePopupPanel={setridePopupPanel} />
+          <ConfirmRidePopUp
+          ride={ride}
+
+          setconfirmridePopupPanel={setconfirmridePopupPanel} setridePopupPanel={setridePopupPanel} />
       </div>
     </div>
   )
