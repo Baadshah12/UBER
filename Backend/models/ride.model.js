@@ -48,6 +48,12 @@ const rideSchema = new mongoose.Schema({
         type: String,
         select: false ,// Do not return OTP in queries
         required: true
+    },
+    pickupAddress: {
+        type: String
+    },
+    dropAddress: {
+        type: String
     }
     
 });

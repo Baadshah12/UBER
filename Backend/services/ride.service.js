@@ -59,19 +59,58 @@ module.exports.createRide = async ({
         throw new Error('User ID, pickup location, drop location and vehicle type are required');
     }
 
-    const fare = await getFare(pickupLocation, dropLocation);
+    let fare;
+    try {
+        fare = await getFare(pickupLocation, dropLocation);
+    } catch (err) {
+        console.error('Error in getFare during ride creation:', err);
+        throw new Error('Failed to calculate fare. Check Google Maps API key, billing, and coordinates.');
+    }
     const otp = getOtp(4);
     
+    // Reverse geocode pickup and drop locations if they are coordinates
+    let pickupAddress = '';
+    let dropAddress = '';
+    try {
+        // If pickupLocation is in 'lat,lng' format
+        if (/^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(pickupLocation)) {
+            const [lat, lng] = pickupLocation.split(',').map(Number);
+            pickupAddress = await mapService.getAddressFromCoordinates(lat, lng);
+        } else {
+            pickupAddress = pickupLocation;
+        }
+        if (/^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(dropLocation)) {
+            const [lat, lng] = dropLocation.split(',').map(Number);
+            dropAddress = await mapService.getAddressFromCoordinates(lat, lng);
+        } else {
+            dropAddress = dropLocation;
+        }
+    } catch (err) {
+        console.error('Error reverse geocoding pickup/drop locations:', err);
+        // fallback to coordinates if geocoding fails
+        pickupAddress = pickupLocation;
+        dropAddress = dropLocation;
+    }
+
     console.log('=== RIDE CREATION DEBUG ===');
     console.log('Generated OTP:', otp);
     console.log('Fare:', fare);
     console.log('Vehicle Type:', vehicleType);
     console.log('Selected Fare:', fare[vehicleType]);
+    console.log('Pickup Address:', pickupAddress);
+    console.log('Drop Address:', dropAddress);
+
+    if (typeof fare[vehicleType] !== 'number' || isNaN(fare[vehicleType])) {
+        console.error('Invalid fare for vehicleType:', vehicleType, 'Fare object:', fare);
+        throw new Error('Invalid fare for selected vehicle type.');
+    }
 
     const ride = await rideModel.create({
         user,
         pickupLocation,
         dropLocation,
+        pickupAddress,
+        dropAddress,
         otp: otp,
         fare: fare[vehicleType],
     });

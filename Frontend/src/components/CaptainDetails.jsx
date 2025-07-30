@@ -5,6 +5,9 @@ import {CaptainDataContext} from '../context/CaptainContext'
 
 const CaptainDetails = () => {
   const { captain } = useContext(CaptainDataContext);
+  if (!captain || !captain.fullname) {
+    return <div>Loading captain details...</div>;
+  }
   return (
     <div>
         <div className='flex items-center justify-between'>

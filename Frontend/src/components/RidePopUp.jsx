@@ -19,14 +19,14 @@ const RidePopUp = (props) => {
                 <div className='flex items-center gap-5 p-3 border-b-2 '>
                   <i className=' ri-map-pin-user-fill'></i>
                   <div>
-                    <h3 className='text-lg font-medium '>{props.ride?.pickupLocation}</h3>
+                    <h3 className='text-lg font-medium '>{props.ride?.pickupAddress || props.ride?.pickupLocation}</h3>
                   </div>
                 </div>
                 <div className='flex items-center gap-5 p-3 border-b-2 '>
                   <i className=' text-lg ri-map-pin-2-fill'></i>
                   <div>
                     
-                    <h3 className='text-lg font-medium '>{props.ride?.dropLocation}</h3>
+                    <h3 className='text-lg font-medium '>{props.ride?.dropAddress || props.ride?.dropLocation}</h3>
                   </div>
                 </div>
                 <div className='flex items-center gap-5 p-3  '>

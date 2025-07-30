@@ -6,13 +6,19 @@ const rideModel = require('../models/ride.model');
 const userModel = require('../models/user.model');
 
 module.exports.createRide = async (req, res) => {
+    if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: 'User not authenticated' });
+    }
+    console.log('Received ride creation request:', req.body); // Add this line for debugging
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.error('Validation errors:', errors.array());
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { userId, pickupLocation, dropLocation, vehicleType } = req.body;
+    const { userId, pickupLocation, dropLocation, vehicleType, pickupCoordinates } = req.body;
     try {   
+        // Create the ride as before
         const ride = await rideService.createRide({
             user: req.user._id, 
             pickupLocation,
@@ -23,27 +29,33 @@ module.exports.createRide = async (req, res) => {
         // Fetch the ride from DB with OTP and user populated
         const rideWithUser = await rideModel.findById(ride._id).select('+otp').populate('user');
 
-        // Get user's current GPS location instead of geocoding pickup address
-        const user = await userModel.findById(req.user._id);
-        console.log('User location from database:', user.location);
+        // Use pickupCoordinates if provided, otherwise use user's stored location
+        let lat, lng;
+        if (pickupCoordinates && typeof pickupCoordinates.lat === 'number' && typeof pickupCoordinates.lng === 'number') {
+            lat = pickupCoordinates.lat;
+            lng = pickupCoordinates.lng;
+            console.log('Using pickupCoordinates from request:', { lat, lng });
+        } else {
+            // Get user's current GPS location instead of geocoding pickup address
+            const user = await userModel.findById(req.user._id);
+            console.log('User location from database:', user.location);
 
-        if (!user.location || !user.location.coordinates || user.location.coordinates.length !== 2) {
-            return res.status(400).json({ 
-                message: 'User location not available. Please allow location access.',
-                pickupLocation
-            });
+            if (!user.location || !user.location.coordinates || user.location.coordinates.length !== 2) {
+                return res.status(400).json({ 
+                    message: 'User location not available. Please allow location access.',
+                    pickupLocation
+                });
+            }
+            // Extract lat/lng from GeoJSON coordinates [longitude, latitude]
+            [lng, lat] = user.location.coordinates;
+            console.log('Using user GPS coordinates:', { lat, lng, radius: 20 });
         }
 
-        // Extract lat/lng from GeoJSON coordinates [longitude, latitude]
-        const [lng, lat] = user.location.coordinates;
-
-        console.log('Using user GPS coordinates:', { lat, lng, radius: 20 });
-
-        // Search for captains near user's GPS location
+        // Search for captains near the chosen coordinates
         const captainInRadius = await mapsService.getCaptainInTheRadius(
             lat,
             lng,
-            20  // Increased radius to 20 km
+            50  // Increased radius to 50 km
         );
 
         captainInRadius.map(captain => {

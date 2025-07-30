@@ -13,6 +13,11 @@ import { useContext, useEffect } from 'react'
 import { UserContextData } from '../context/UserContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import LiveTracking from '../components/LiveTracking'
+import { LoadScript } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API;
+
+const vehicleTypes = ['car', 'auto', 'moto']; // Only allow these
 
 const Home = () => {
   const [pickup, setPickup] = useState('')
@@ -38,8 +43,10 @@ const Home = () => {
   const [rideData, setRideData] = useState(null) // Add state for complete ride data
   const [userLocation, setUserLocation] = useState(null) // Add state for user location
   const navigate = useNavigate()
+  const [voiceModal, setVoiceModal] = useState({ open: false, status: '', message: '' });
 
   useEffect(() => {
+    if (!user || !user._id || !socket) return; // Guard against null user
     socket.emit("join",{userType:"user",userId:user._id})
     
     // Add user location tracking
@@ -368,6 +375,109 @@ const Home = () => {
     }
   }
 
+  // --- VOICE BOOKING LOGIC ---
+  const handleVoiceBooking = async () => {
+    setVoiceModal({ open: true, status: 'listening', message: 'Listening for your destination and vehicle type...' });
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceModal({ open: true, status: 'error', message: 'Speech recognition not supported in this browser.' });
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      setVoiceModal({ open: true, status: 'processing', message: `Heard: "${transcript}". Processing...` });
+      // Parse vehicle type
+      let foundVehicle = vehicleTypes.find(type => transcript.includes(type));
+      if (!foundVehicle) {
+        setVoiceModal({ open: true, status: 'error', message: 'Please specify a valid vehicle type: auto, car, or moto.' });
+        return;
+      }
+      // Parse destination (remove vehicle type words)
+      let destinationSpoken = transcript;
+      vehicleTypes.forEach(type => {
+        destinationSpoken = destinationSpoken.replace(type, '');
+      });
+      destinationSpoken = destinationSpoken.replace('book a ride for', '').replace('to', '').trim();
+      if (!destinationSpoken) {
+        setVoiceModal({ open: true, status: 'error', message: 'Could not detect destination. Please try again.' });
+        return;
+      }
+      // Get user location
+      if (!navigator.geolocation) {
+        setVoiceModal({ open: true, status: 'error', message: 'Geolocation not supported.' });
+        return;
+      }
+      setVoiceModal({ open: true, status: 'processing', message: 'Getting your location...' });
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        setVoiceModal({ open: true, status: 'processing', message: 'Geocoding your destination...' });
+        // Geocode destination
+        try {
+          const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destinationSpoken)}&key=${GOOGLE_MAPS_API_KEY}`);
+          const geoData = await geoRes.json();
+          if (!geoData.results || geoData.results.length === 0) {
+            setVoiceModal({ open: true, status: 'error', message: 'Could not find the destination on the map.' });
+            return;
+          }
+          const destLocation = geoData.results[0].geometry.location;
+          // Send ride request
+          setVoiceModal({ open: true, status: 'processing', message: 'Booking your ride...' });
+          // Log the payload for debugging
+          const ridePayload = {
+            pickupLocation: `${userLocation.lat},${userLocation.lng}`,
+            dropLocation: `${destLocation.lat},${destLocation.lng}`,
+            vehicleType: foundVehicle,
+            userLocation: userLocation,
+            pickupCoordinates: userLocation
+          };
+          console.log('Sending ride request:', ridePayload);
+          // Validate required fields
+          if (!ridePayload.pickupLocation || !ridePayload.dropLocation || !ridePayload.vehicleType) {
+            setVoiceModal({ open: true, status: 'error', message: 'Missing required ride details. Please try again.' });
+            return;
+          }
+          try {
+            const response = await axios.post(
+              `${import.meta.env.VITE_BASE_URL}/rides/create`,
+              ridePayload,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+              }
+            );
+            setVoiceModal({ open: true, status: 'success', message: 'Ride booked successfully! Waiting for captain confirmation.' });
+            // Optionally, trigger UI updates or navigation here
+          } catch (err) {
+            setVoiceModal({ open: true, status: 'error', message: 'Failed to book ride. Please try again.' });
+          }
+        } catch (err) {
+          setVoiceModal({ open: true, status: 'error', message: 'Error geocoding destination.' });
+        }
+      }, (error) => {
+        setVoiceModal({ open: true, status: 'error', message: 'Could not get your location.' });
+      });
+    };
+    recognition.onerror = (event) => {
+      setVoiceModal({ open: true, status: 'error', message: 'Speech recognition error. Please try again.' });
+    };
+    recognition.onend = () => {
+      if (voiceModal.status === 'listening') {
+        setVoiceModal({ open: false, status: '', message: '' });
+      }
+    };
+    recognition.start();
+  };
+
   return (
     <div className='h-screen relative overflow-hidden'>
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" alt="Uber Logo" className="w-16 absolute left-5 top-5 z-10" />
@@ -375,6 +485,37 @@ const Home = () => {
           <LiveTracking userLocation={userLocation} />
         </div>
         <div className='flex flex-col justify-end h-screen absolute top-0 w-full'>
+          {/* Book by Voice Button - Hide when manually entering addresses */}
+          {!panelOpen && (
+            <div className='flex justify-center items-center mb-2'>
+              <button
+                onClick={handleVoiceBooking}
+                className='bg-blue-600 text-white px-6 py-2 rounded-lg shadow font-semibold hover:bg-blue-700 transition duration-200'
+              >
+                <i className="ri-mic-line mr-2"></i> Book by Voice
+              </button>
+            </div>
+          )}
+          {/* Feedback Modal */}
+          {voiceModal.open && (
+            <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
+              <div className='bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center'>
+                <div className='mb-4'>
+                  {voiceModal.status === 'listening' && <span className='text-blue-600 text-3xl'><i className="ri-mic-line animate-pulse"></i></span>}
+                  {voiceModal.status === 'processing' && <span className='text-yellow-600 text-3xl'><i className="ri-loader-4-line animate-spin"></i></span>}
+                  {voiceModal.status === 'success' && <span className='text-green-600 text-3xl'><i className="ri-checkbox-circle-line"></i></span>}
+                  {voiceModal.status === 'error' && <span className='text-red-600 text-3xl'><i className="ri-close-circle-line"></i></span>}
+                </div>
+                <div className='text-lg font-medium mb-2'>{voiceModal.message}</div>
+                <button
+                  className='mt-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition'
+                  onClick={() => setVoiceModal({ open: false, status: '', message: '' })}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
           <div className='h-[30%] bg-white pt-2 pb-6 px-6 relative z-10'>
             <h5  ref={panelCloserRef} onClick={() => setPanelOpen(!panelOpen)} className='absolute opacity-0 top-6 right-6 text-2xl z-20'>
               <i className="ri-arrow-down-s-line"></i>

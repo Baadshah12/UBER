@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { LoadScript, GoogleMap, Marker } from '@react-google-maps/api'
+import { SocketContext } from '../context/SocketContext';
+import { UserContextData } from '../context/UserContext';
 
 const defaultCenter = {
   lat: 0,
@@ -11,6 +13,8 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API
 const LiveTracking = ({ userLocation = null, height = '100vh' }) => {
   const [position, setPosition] = useState(null)
   const [error, setError] = useState(null)
+  const { socket } = useContext(SocketContext);
+  const { user } = useContext(UserContextData);
 
   const containerStyle = {
     width: '100%',
@@ -37,6 +41,16 @@ const LiveTracking = ({ userLocation = null, height = '100vh' }) => {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
           })
+          // Emit user location to backend
+          if (socket && user?._id) {
+            socket.emit('update-location-user', {
+              userId: user._id,
+              location: {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              }
+            });
+          }
         },
         (err) => {
           setError('Unable to retrieve your location')
@@ -49,7 +63,7 @@ const LiveTracking = ({ userLocation = null, height = '100vh' }) => {
     const intervalId = setInterval(updateLocation, 10000); // Update every 10 seconds
 
     return () => clearInterval(intervalId)
-  }, [userLocation])
+  }, [userLocation, socket, user?._id])
 
   return (
     <div>

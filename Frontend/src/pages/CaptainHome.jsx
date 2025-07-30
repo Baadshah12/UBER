@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import CaptainDetails from '../components/CaptainDetails'
 import RidePopUp from '../components/RidePopUp'
@@ -7,7 +7,6 @@ import ConfirmRidePopUp from '../components/ConfirmRidePopUp'
 import { useGSAP } from '@gsap/react'
 import { SocketContext } from '../context/SocketContext.jsx'
 import { CaptainDataContext } from '../context/CaptainContext.jsx'
-import { useContext } from 'react'
 import axios from 'axios'
 import LiveTracking from '../components/LiveTracking'
 
@@ -22,41 +21,49 @@ const CaptainHome = () => {
   const { captain } = useContext(CaptainDataContext);
 
   useEffect(() => {
-        socket.emit('join', {
+    if (!socket || !captain?._id) return;
+
+    socket.emit('join', {
+      userId: captain._id,
+      userType: 'captain'
+    });
+
+    const handleNewRide = (data) => {
+      console.log('New ride request received:', data);
+      setride(data);
+      setridePopupPanel(true);
+    };
+
+    socket.on('new-ride', handleNewRide);
+
+    return () => {
+      socket.off('new-ride', handleNewRide);
+    };
+  }, [socket, captain?._id]);
+
+  useEffect(() => {
+    if (!socket || !captain?._id) return;
+    const updateLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          console.log('UserId:', captain._id, 'Location:', {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+          socket.emit('update-location-captain', {
             userId: captain._id,
-            userType: 'captain'
+            location: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+          })
         })
-        const updateLocation = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-
-                    console.log('UserId:', captain._id, 'Location:', {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    })
-
-                    socket.emit('update-location-captain', {
-                        userId: captain._id,
-                        location: {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        }
-                    })
-                })
-        }
       }
-
-      // You may want to call updateLocation here or set up an interval
-      const locationInterval = setInterval(updateLocation, 10000); // Update every 10 seconds
-      updateLocation();
-
-  }, []);
-      socket.on('new-ride', (data) => {
-        console.log('New ride request received:', data);
-        setride(data);
-        setridePopupPanel(true);
-
-      })  
+    }
+    const locationInterval = setInterval(updateLocation, 10000); // Update every 10 seconds
+    updateLocation();
+    return () => clearInterval(locationInterval);
+  }, [socket, captain?._id]);
 
     async function confirmRide() {
       try {
